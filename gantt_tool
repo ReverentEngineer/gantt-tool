@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+from argparse import ArgumentParser
+import os
+import datetime as dt
+from yaml import add_path_resolver
+from yaml import load
+from yaml import Loader
+from yaml import YAMLObject
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as font_manager
+import matplotlib.dates
+import matplotlib.ticker as ticker
+from matplotlib.dates import WEEKLY,MONTHLY, DateFormatter, rrulewrapper, RRuleLocator 
+import numpy as np
+  
+
+def create_gantt(gdd, output):
+
+    _, extension = os.path.splitext(output)
+   
+    ylabels = []
+
+    for activity in gdd['activities']:
+        if activity['from'] > activity['to']:
+            raise ValueError("'from' is greater than 'to' in '%s'" % activity['name'])
+        ylabels.append(activity['name'])
+
+    pos = np.arange(0.5, len(gdd['activities']) * 0.5 + 0.5, 0.5)
+    fig = plt.figure(figsize=(20,8))
+    ax = fig.add_subplot(111)
+    
+    for i in range(len(gdd['activities'])):
+        _from = gdd['activities'][i]['from']
+        to = gdd['activities'][i]['to']
+        ax.barh((i*0.5)+0.5, to - _from, left=_from, height=0.3,
+                align='center', edgecolor='lightgreen', color='orange', alpha = 0.8)
+
+    locsy, labelsy = plt.yticks(pos,ylabels)
+    plt.setp(labelsy, fontsize = 14)
+    ax.set_ylim(ymin = -0.1, ymax = len(gdd['activities'])*0.5+0.5)
+    ax.grid(color = 'g', linestyle = ':', axis='x')
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    labelsx = ax.get_xticklabels()
+    plt.setp(labelsx, rotation=30, fontsize=10)
+    font = font_manager.FontProperties(size='small')
+    ax.legend(loc=1,prop=font)
+    ax.invert_yaxis()
+    plt.savefig(output)
+
+def main():
+    parser = ArgumentParser()
+    parser.add_argument("gdd", help="A Gantt Description Document")
+    parser.add_argument("output", help="The name of the file to write the HTML result")
+    args = parser.parse_args()
+
+    with open(args.gdd) as gdd_file:
+        gdd = load(gdd_file, Loader=Loader)
+        create_gantt(gdd, args.output)
+
+if __name__ == '__main__':
+    main()
